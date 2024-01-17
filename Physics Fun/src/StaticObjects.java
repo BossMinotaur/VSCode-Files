@@ -8,4 +8,8 @@ public class StaticObjects {
     public static double dt = 1.0 / 120.0;
     public static Random rand = new Random();
 
+    public static ArrayList<Chunk> chunks = new ArrayList<>();
+    public static ArrayList<Chunk> showChunks = new ArrayList<>();
+
+
 }

@@ -11,7 +11,7 @@ public class Particle {
     double yvel;
     double dt = 1.0 / 120.0;
     double r;
-    ArrayList<Double> influencesList = new ArrayList<>();
+    ArrayList<ArrayList<Double>> influencesList = new ArrayList<>();
 
 
 
@@ -108,7 +108,7 @@ public class Particle {
         x += xvel * dt;
         y += yvel * dt;
         applyFriction();
-        if (App.frameCount % 10 == 0) {
+        // if (App.frameCount % 10 == 0) {
             checkBounds();
         }
         

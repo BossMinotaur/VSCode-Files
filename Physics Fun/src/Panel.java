@@ -46,8 +46,16 @@ public class Panel extends JPanel{
             defaultParticle.setFrameFromCenter(p.getCenter(), p.getCorner());
             g2.fill(defaultParticle);
         }
+
+        // Show Shown chunks
+        for (Chunk c : StaticObjects.showChunks) {
+            g2.drawRect(c.getxPos() * 10, c.getyPos() * 10, 10, 10);
+        }
+
         g2.drawString("Possible FPS: " + possibleFrames, 10, 20);
         g2.drawString("FPS Cap: " + 1 / StaticObjects.dt, 10, 50);
+
+
 
 
     }
