@@ -12,6 +12,8 @@ public class Particle {
     double dt = 1.0 / 120.0;
     double r;
     ArrayList<ArrayList<Double>> influencesList = new ArrayList<>();
+    double xAccel = 0; 
+    double yAccel = 0;
 
 
 
@@ -50,6 +52,14 @@ public class Particle {
           }
 
       }
+
+    public double getR() {
+        return r;
+    }
+
+    public void setR(double r) {
+        this.r = r;
+    }
 
     public int getDiameter() {
         return diameter;
@@ -90,32 +100,44 @@ public class Particle {
         return corner;
     }
 
-    public ArrayList<Double> getInfluencesList() {
+    public ArrayList<ArrayList<Double>> getInfluencesList() {
         return influencesList;
     }
 
-    public void addToInfluencesList(double value) {
-        influencesList.add(value);
+    public void addInfluence(double xInfluence, double yInfluence) {
+        ArrayList<Double> influence = new ArrayList<>();
+        influence.add(xInfluence); 
+        influence.add(yInfluence);
+        influencesList.add(influence);
+        // System.out.println(influencesList);
+
+        
+    }
+
+    public void processMovement() {  
+ 
+        x += xvel * dt;
+        y += yvel * dt;
+
+        
+        xvel += xAccel * dt;  
+        yvel += yAccel * dt;
+
+        // xvel += influencesList[0]
+        applyFriction();
+        // if (App.frameCount % 10 == 0) {
+        checkBounds();
+        applyInfluences();
+
+
+        
+
     }
 
     @Override
     public String toString() {
         return "Particle [diameter=" + diameter + ", x=" + x + ", y=" + y + ", xvel=" + xvel + ", yvel=" + yvel
-                + ", dt=" + dt + ", r=" + r + "]";
-    }
-
-    public void processMovement() {  
-        x += xvel * dt;
-        y += yvel * dt;
-        applyFriction();
-        // if (App.frameCount % 10 == 0) {
-            checkBounds();
-        }
-        
-        
-        // System.out.println("x: " + x);
-        // System.out.println("y: " + y);
-
+                + ", dt=" + dt + ", r=" + r + ", influencesList=" + influencesList + "]";
     }
 
     public void checkBounds() {
@@ -140,12 +162,75 @@ public class Particle {
     }
     public void applyFriction() {
         // Friction is smaller if dt is smaller
-        double frictionFactor = (1 - dt * dt * dt);
+        double frictionFactor = (1 - dt*dt);
         // System.out.println(frictionFactor);
         xvel *= frictionFactor;
         yvel *= frictionFactor;
         // System.out.println("xvel: " + xvel);
     }
+
+
+    public void applyInfluences() {
+    // Influences smoothing factors
+    double smoothFactor = 0.5;  
+
+    // Running averages
+    double xAccelAvg = 0;
+    double yAccelAvg = 0;
+
+    // Loop through each influence
+    for (ArrayList<Double> influence : influencesList) {
+        
+        // Get x and y components
+        double xInf = influence.get(0);
+        double yInf = influence.get(1);
+
+        // Update acceleration averages  
+        xAccelAvg = xAccelAvg*smoothFactor + xInf*(1-smoothFactor);
+        yAccelAvg = yAccelAvg*smoothFactor + yInf*(1-smoothFactor);
+
+    }
+
+    // Apply acceleration 
+    xvel += xAccelAvg * dt;
+    yvel += yAccelAvg * dt;
+
+    // Clear accelerations for next frame
+    xAccelAvg = 0;
+    yAccelAvg = 0;
+
+    }
+
+    // public void applyInfluences() {
+    //     double decayFactor = 0.5;  
+
+    //     for (ArrayList<Double> influence : influencesList) {
+    //         double xInf = influence.get(0);
+    //         double yInf = influence.get(0);
+
+    //         influence.set(0, xInf * decayFactor);
+    //         influence.set(1, yInf * decayFactor);
+
+    //         // Update accelerations from influences
+    //         xAccel += -1 * xInf;
+    //         yAccel += -1 * yInf;       
+            
+    //         // Smoothing factor (closer to 1 is more smooth)
+    //         double smooth = 0.5;
+
+    //         // Running averages
+    //         double xAccelAvg = 0; 
+    //         double yAccelAvg = 0;
+
+    //         // Update averages
+    //         xAccelAvg = xAccelAvg*smooth + xInf*(1-smooth);
+    //         yAccelAvg = yAccelAvg*smooth + yInf*(1-smooth);
+
+    //         // Apply averages to accelerate particle
+    //         xvel += xAccelAvg * dt;
+    //         yvel += yAccelAvg * dt;
+    //     }
+    // }
 
 }    
 

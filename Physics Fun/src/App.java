@@ -32,17 +32,18 @@ public class App {
 
         
         // Create 14535 chunks covering screen
-        for (i = 0; i < 14534; i++) {
+        for (i = 0; i < 14535; i++) {
             int x = i / 95;
             int y = i % 95;
 
             Chunk chunk = new Chunk(x, y);
+            chunk.setChunkArrayIndex(i);
             StaticObjects.chunks.add(chunk);
         }
         
         // Loop over and spawn 1000 random particles with diameter 5
-        for(i = 0; i < 300; i++) {
-            Particle p = new Particle(5);
+        for(i = 0; i < 20; i++) {
+            Particle p = new Particle(10);
             StaticObjects.particles.add(p); 
 
             // Assign particles to chunk
@@ -90,38 +91,48 @@ public class App {
         frameCount++;
         ArrayList<Particle> particles = StaticObjects.particles;
         ArrayList<Chunk> chunks = StaticObjects.chunks;
+        
 
-        // Loop through chunks, calc forces, and clear them
+        // Loop through chunks
         for (i = 0; i < chunks.size(); i++) {
-            Chunk c = chunks.get(i);
-            int numContainedParticles = c.getContainedParticles().size();
-           
-            
-            // Loop through particles in chunk
-            for (int p1Index = 0; p1Index < numContainedParticles; p1Index++) {
-                Particle p1 = particles.get(p1Index);
-                
-                // Loop through later particles in chunk
-                for (j = p1Index + 1; j < numContainedParticles; j++) {
-                    Particle p2 = particles.get(j);
+            Chunk currentChunk = chunks.get(i);
+            ArrayList<Chunk> thisAndAdjChunks = currentChunk.getThisAndAdjChunks();
 
-                    double[] p1InfluenceArray = calcParticleInfluence(p1, p2);
-                    double[] p2InfluenceArray = Arrays.stream(p1InfluenceArray).map(x -> x * -1).toArray();
+            // Create empty list to hold all particles  
+            ArrayList<Particle> allNearbyParticles = new ArrayList<>();
 
-                    p1.addToInfluencesList(p1InfluenceArray);
-                    
-
-
-                }
-
-
-                
+            // Loop through each chunk
+            for (Chunk chunk : thisAndAdjChunks) {
+                ArrayList<Particle> chunkParticles = chunk.getContainedParticles();
+                allNearbyParticles.addAll(chunkParticles); 
             }
+            if (allNearbyParticles.size() > 1) {
+                // Loop through particles in chunk
+                for (int p1Index = 0; p1Index < allNearbyParticles.size(); p1Index++) {
+                    Particle p1 = allNearbyParticles.get(p1Index);
+                    // Loop through later particles in chunk and calc influences
+                    for (j = p1Index + 1; j < allNearbyParticles.size(); j++) {
+                        Particle p2 = particles.get(j);
 
+                        double[] p1InfluenceArray = calcParticleInfluence(p1, p2);
+                        boolean cont = p1InfluenceArray[0] != 0 || p1InfluenceArray[1] != 0;
+                        if (cont)
+                            // System.out.println("p1InfluenceArray[0]: " + p1InfluenceArray[1] + "equal to zero? ");
+                            // System.out.println(p1InfluenceArray[0]);
 
-
+                            // System.out.println(p1InfluenceArray[0] != 0.0);
+                            p1.addInfluence(p1InfluenceArray[0], p1InfluenceArray[1]);
+                            // System.out.println(p1InfluenceArray[0] + " " + (p1InfluenceArray[1]));
+                            p2.addInfluence(-1 * p1InfluenceArray[0], -1 * p1InfluenceArray[1]);
+                            if (i == 7000) {
+                                System.out.println("p1 influences list: " + p1.getInfluencesList());
+                        }
+                    }
+                }
+            }
+            allNearbyParticles.clear();
             
-            c.clearContainedParticles();
+            currentChunk.clearContainedParticles();
         }
         
         // Loop through particles
@@ -134,57 +145,54 @@ public class App {
         int chunkY = (int) (p1.y / 10);
 
         int chunkIndex = chunkX * 95 + chunkY;
-        // System.out.println("Chunk X: " + chunkX);
-        // System.out.println("Chunk Y: " + chunkY);
-
-        // System.out.println("Chunk index: " + chunkIndex);
+        if (chunkIndex > 14534) {
+            chunkIndex = 14534;
+        }
         StaticObjects.chunks.get(chunkIndex).addContainedParticle(p1);
         
         }
 
         // Highlight given Chunk
         StaticObjects.chunks.get(7000).showChunk();
-        System.out.println(StaticObjects.chunks.get(7000).getContainedParticles());
+        // System.out.println(StaticObjects.chunks.get(7000).getContainedParticles());
+
 
         // Update Screen
         panel.repaint();
     }
     
     public static double[] calcParticleInfluence(Particle p1, Particle p2) {
+        System.
         // See https://www.desmos.com/calculator/oducvmmkdw
 
-        // Particles dont like to be close to each other
-        double dist = Point2D.distance(p1.x, p1.y, p2.x, p2.y);
-        if (dist > 20) {
-            return (new double[] {0 , 0});
-        }
-        dist = Math.max(.1, dist);  
-        double spacingForce = -1 / dist - .05983 / Math.log(dist);
+        // Calculate unit vector pointing from p2 to p1
+        double dx = p1.x - p2.x;
+        double dy = p1.y - p2.y;
+        double dist = Math.sqrt(dx*dx + dy*dy);
 
-        // Particles are affected by gravity however
-        double gravity = 1 / Math.sqrt(dist + .1);
+        double avgSize = (p1.getR() * p1.getR() + p2.getR() * p2.getR()) / 2;
         
-        // Influence is a range from -7.626 (less than .1 from each other, pushed apart) to .169 (pulled together by gravity)
-        double influence = spacingForce + gravity;
-        
-        double xShare;
-        if (dist == .1) {
-            xShare = StaticObjects.rand.nextDouble();
-        }
-        else {
-            xShare = (p1.x - p2.x) * (p1.x - p2.x) / dist * dist;
-        }
-        double yShare = 1 - xShare;
-        double[] shareArray = new double[] {xShare * influence, yShare * influence};
+        // Using Lennard-Jones formula
+        double A = 10; 
+        double B = 5;
+        double r = dist / avgSize; // normalize distance
+        double rPower12 = Math.pow(r, 12); 
+        double rPower6 = Math.pow(r, 6);
+        double influence = -A / rPower12 + B / rPower6;
 
-        // p1 - p2
-        // If p2 is greater, p1 should get nex
-        int xSgn = Double.compare(p1.x, p2.x);
-        int ySgn = Double.compare(p1.y, p2.y);
-
-        double[] p1Array = {xShare * influence * xSgn, yShare * influence * ySgn};
-        // double[] p2Array = {-1 * xShare * influence * xSgn, -1 * yShare * influence * ySgn};
-        return p1Array;
-    }
+        double nx = dx / dist; 
+        double ny = dy / dist;
+      
+        // Scale influence by unit vector to get x and y components
+        double xInfluence = influence * nx;
+        double yInfluence = influence * ny;
+      
+        return new double[]{xInfluence, yInfluence};
+      
+      }
 
 }
+// TODO: make speed influence influences so faster balls effect a bigger influence on their opponents
+// TODO: add proper accelleration
+
+// the quick browb fox ran over the brown dofg
